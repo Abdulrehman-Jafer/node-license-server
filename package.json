@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint --plugin markdown --ext js,md .",
-    "start": "node ./index.js",
+    "start": "nodemon ./index.js",
     "test": "mocha --check-leaks --bail --no-exit --reporter spec test/",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --check-leaks --no-exit --reporter dot test/",
     "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --check-leaks --no-exit --reporter spec test/"
@@ -41,6 +41,8 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
+    "nodemon": "^3.1.9",
+    "redis": "^4.7.0",
     "redis-async-wrapper": "0.0.5",
     "winston": "^3.0.0-rc5"
   }

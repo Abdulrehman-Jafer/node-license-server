@@ -1,48 +1,101 @@
-'use strict'
-const express = require('express')
-const router = express.Router()
-const config = require('../config')
-const utils = require('./utils')
-const model = require('./model')
-const logger = require('./logger')
-const errors = require('./errors')
+"use strict";
+const express = require("express");
+const router = express.Router();
+const config = require("../config");
+const utils = require("./utils");
+const logger = require("./logger");
+const errors = require("./errors");
+const { LisenceManager } = require("./lisenceManagement");
 
 class Handler {
   async handleLicense(req, res) {
-    if (!utils.attrsNotNull(req.body, ['key', 'id'])) return res.json({status: errors.BAD_REQUEST})
-    const {key, id:machine} = req.body
-    const data = model.LicenseKey.validate(key)
-    if (!data) return res.json({status: errors.INVALID_INPUT})
+    if (!utils.attrsNotNull(req.body, ["key", "id"]))
+      return res.json({ status: errors.BAD_REQUEST });
+    const { key, id: machine } = req.body;
+    const data = LisenceManager.validate(key);
+    if (!data) return res.json({ status: errors.INVALID_INPUT });
 
     if (!config.stateless) {
-      const licenseKey = await model.LicenseKey.fetch(key)
+      const licenseKey = await LisenceManager.fetch(key);
       if (!licenseKey || licenseKey.revoked == 1) {
-        logger.error(`Failed to check the license key in databaes: ${key}`)
-        return res.json({status: errors.NULL_DATA})
+        logger.error(`Failed to check the license key in databaes: ${key}`);
+        return res.json({ status: errors.NULL_DATA });
       }
-      
-      let success = await model.LicenseKey.authorize(key, machine)
-      if (licenseKey.machine === machine) success = true
+
+      let success = await LisenceManager.authorize(key, machine);
+      if (licenseKey.machine === machine) success = true;
       if (!success) {
-        logger.error(`Used key encountered: ${key}, ${machine}`)
-        return res.json({status: errors.DUPLICATE_DATA})
+        logger.error(`Used key encountered: ${key}, ${machine}`);
+        return res.json({ status: errors.DUPLICATE_DATA });
       }
     }
-    const license = model.LicenseKey.generateLicense(key, machine)
-    return res.json({status: errors.SUCCESS, license})
+    const license = await LisenceManager.generateLicense(key, machine);
+    return res.json({ status: errors.SUCCESS, license });
   }
 
-  issue(options={}) {
-    return model.LicenseKey.issue(options)
+  async issue(options = {}) {
+    return LisenceManager.issue(options);
   }
 
-  revoke(key) {
-    return model.LicenseKey.revoke(key)
+  async revoke(key) {
+    return LisenceManager.revoke(key);
+  }
+
+  async getAllKeys() {
+    try {
+      const keys = await LisenceManager.fetchAll();
+
+      console.log({ keys });
+
+      return keys;
+    } catch (error) {
+      logger.error("Error fetching keys:", error);
+      throw error;
+    }
   }
 }
 
-const handler = new Handler
+const handler = new Handler();
 
-router.post('/license', handler.handleLicense.bind(handler))
+// For licensing
+router.post("/license", handler.handleLicense);
 
-module.exports = { router, handler }
+// Get all keys
+router.get("/keys", async (req, res) => {
+  try {
+    const keys = await handler.getAllKeys();
+
+    res.json({ status: errors.SUCCESS, keys: keys });
+  } catch (err) {
+    logger.error(err);
+    res.json({ status: errors.SERVER_ERROR, keys: [] });
+  }
+});
+
+// Create new key
+router.post("/keys", async (req, res) => {
+  try {
+    console.log(req.body, "body");
+    const key = await handler.issue(req.body);
+    const keys = await handler.getAllKeys(); // Fetch updated list
+    res.json({ status: errors.SUCCESS, keys, key });
+  } catch (err) {
+    logger.error(err);
+    res.json({ status: errors.SERVER_ERROR, keys: [] });
+  }
+});
+
+// Revoke key
+router.post("/keys/:key/revoke", async (req, res) => {
+  try {
+    await handler.revoke(req.params.key);
+    const keys = await handler.revoke(); // Fetch updated list
+    res.json({ status: errors.SUCCESS, keys: keys });
+  } catch (err) {
+    console.log({ err });
+    logger.error(err);
+    res.json({ status: errors.SERVER_ERROR, keys: [] });
+  }
+});
+
+module.exports = { router, handler };
