@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify License</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #e3f2fd, #ffffff);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #004085;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+
+        form {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        label {
+            font-size: 16px;
+            color: #555;
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 14px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #fafafa;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="file"]:focus {
+            border-color: #0056b3;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 86, 179, 0.3);
+        }
+
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .file-info span {
+            color: #333;
+            font-size: 18px;
+            /* Increased font size for file name */
+        }
+
+        .file-info .close-icon {
+            font-size: 24px;
+            /* Increased font size for close icon */
+            color: #ff5722;
+            cursor: pointer;
+        }
+
+        .file-info .close-icon:hover {
+            color: #d45d1f;
+        }
+
+        button {
+            background-color: #0056b3;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        button:hover {
+            background-color: #003d80;
+            transform: scale(1.03);
+        }
+
+        button:active {
+            transform: scale(1);
+        }
+
+        #showResponse {
+            margin-top: 20px;
+            font-size: 15px;
+            color: #0056b3;
+            word-wrap: break-word;
+            text-align: center;
+            white-space: pre-wrap;
+        }
+
+        form:hover {
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        @media (max-width: 600px) {
+            form {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            button {
+                padding: 14px;
+                font-size: 15px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <form onsubmit="handleSubmit(event)" enctype="multipart/form-data">
+        <h1>Verify License</h1>
+        <label for="key">Key File</label>
+        <input type="file" name="key" id="key" accept=".txt" onchange="updateFileInfo('key')">
+        <div id="key-info" class="file-info" style="display: none;">
+            <span id="key-file-name">No file selected</span>
+            <span class="close-icon" onclick="removeFile('key')">×</span>
+        </div>
+
+        <label for="license">License File</label>
+        <input type="file" name="license" id="license" accept=".txt" onchange="updateFileInfo('license')">
+        <div id="license-info" class="file-info" style="display: none;">
+            <span id="license-file-name">No file selected</span>
+            <span class="close-icon" onclick="removeFile('license')">×</span>
+        </div>
+
+        <button type="submit">Submit</button>
+        <legend id="showResponse"></legend>
+    </form>
+
+    <script>
+        const showResponse = document.getElementById("showResponse");
+
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const key = document.getElementById('key').files[0];
+            const license = document.getElementById('license').files[0];
+
+            if (!key || !license) {
+                alert('Please upload both the key and license files.');
+                return false;
+            }
+
+            const formData = new FormData();
+            formData.append("key", key);
+            formData.append("license", license);
+            verifyLicense(formData);
+        }
+
+        function updateFileInfo(inputId) {
+            const fileInput = document.getElementById(inputId);
+            const fileName = fileInput.files[0]?.name || "No file selected";
+            const fileInfoDiv = document.getElementById(inputId + "-info");
+            const fileNameSpan = document.getElementById(inputId + "-file-name");
+
+            fileNameSpan.textContent = fileName;
+            fileInput.style.display = 'none';
+            fileInfoDiv.style.display = 'flex';
+        }
+
+        function removeFile(inputId) {
+            const fileInput = document.getElementById(inputId);
+            const fileInfoDiv = document.getElementById(inputId + "-info");
+            const fileNameSpan = document.getElementById(inputId + "-file-name");
+
+            fileInput.value = '';
+            fileNameSpan.textContent = "No file selected";
+            fileInput.style.display = 'block';
+            fileInfoDiv.style.display = 'none';
+        }
+
+        async function verifyLicense(formData) {
+            try {
+                const response = await fetch("/v1/verify/license", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                showResponse.innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.log(error, "error at verify license");
+                showResponse.innerText = "Error: Unable to verify license.";
+            }
+        }
+    </script>
+</body>
+
+</html>

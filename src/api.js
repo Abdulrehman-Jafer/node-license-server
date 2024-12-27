@@ -6,7 +6,8 @@ const utils = require("./utils");
 const logger = require("./logger");
 const errors = require("./errors");
 const { LisenceManager } = require("./lisenceManagement");
-
+const { verifyLicense } = require("../examples/client");
+const multiparty = require("multiparty");
 class Handler {
   async handleLicense(req, res) {
     if (!utils.attrsNotNull(req.body, ["key", "id"]))
@@ -95,6 +96,42 @@ router.post("/keys/:key/revoke", async (req, res) => {
     console.log({ err });
     logger.error(err);
     res.json({ status: errors.SERVER_ERROR, keys: [] });
+  }
+});
+
+router.post("/verify/license", async (req, res) => {
+  try {
+    const form = new multiparty.Form();
+
+    form.parse(req, async function (err, fields, files) {
+      if (err) {
+        console.log(err, "Error parsing form");
+        return res.status(400).json({
+          status: "ERROR",
+          message: "Error parsing form data",
+        });
+      }
+      try {
+        const data = await verifyLicense(files);
+        return res.json({
+          status: "SUCCESS",
+          message: "License verified successfully",
+          data,
+        });
+      } catch (error) {
+        return res.status(500).json({
+          status: "ERROR",
+          message: "Failed to verify license",
+          error: error.message || error,
+        });
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "SERVER_ERROR",
+      message: "Failed to verify license",
+      error: error.message || error,
+    });
   }
 });
 

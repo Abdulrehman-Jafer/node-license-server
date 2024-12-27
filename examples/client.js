@@ -12,31 +12,32 @@ const licenseServer = "http://localhost:4001/v1/license";
 
 const PublicKey = fs.readFileSync(config.rsa_public_key).toString();
 
-const checkLicense = async () => {
-  logger.info("verifying license");
+const checkLicense = async (pathToKey, pathToLicense) => {
+  console.log(pathToKey, pathToLicense);
+  logger.info(`verifying license key:${pathToKey} license:${pathToLicense}`);
   let status = false;
 
   while (!status) {
     try {
-      status = await _checkLicense();
+      return _checkLicense(pathToKey, pathToLicense);
     } catch (e) {
       logger.error(e.toString());
       logger.error(
         "Failed to verfiy software license, please check your license key and license file"
       );
-      process.exit(1);
+      return new Error(e)?.message ?? "Something went wrong!";
     }
   }
 };
 
-const _checkLicense = async () => {
-  const licenseKey = fs.readFileSync("key.txt").toString().replace("\n", "");
+const _checkLicense = async (pathToKey, pathToLicense) => {
+  const licenseKey = fs.readFileSync(pathToKey).toString().replace("\n", "");
 
   const machineId = md.get().digest;
 
   let _license;
   try {
-    _license = fs.readFileSync("license.txt").toString().replace("\n", "");
+    _license = fs.readFileSync(pathToLicense).toString().replace("\n", "");
   } catch (e) {
     logger.warn("Failed to load license file, fetching from license server");
     const params = {
@@ -75,9 +76,9 @@ const _checkLicense = async () => {
   } else throw Error("invalid license");
 };
 
-const start = async () => {
-  await checkLicense();
+const start = async (filesData) => {
   logger.info("Verified license successfully, ready to start now...");
+  return await checkLicense(filesData.key[0].path, filesData.license[0].path);
 };
 
-start();
+module.exports = { verifyLicense: start };
