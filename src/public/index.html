@@ -1,154 +1,169 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>License Key Management</title>
     <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
 
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            max-width: 300px;
-            line-break: anywhere;
-        }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        max-width: 300px;
+        line-break: anywhere;
+      }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+      td.ellipsis {
+        white-space: nowrap;
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+      }
 
-        .btn {
-            padding: 8px 16px;
-            margin: 5px;
-            cursor: pointer;
-        }
 
-        .error {
-            color: red;
-            margin: 10px 0;
-        }
+      td.ellipsis:hover {
+        text-overflow: unset;
+        overflow: auto; 
+        line-break: anywhere;
+        white-space: normal;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        margin: 5px;
+        cursor: pointer;
+      }
+
+      .error {
+        color: red;
+        margin: 10px 0;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="container">
-        <h1>License Key Management</h1>
+      <h1>License Key Management</h1>
 
-        <div>
-            <button class="btn" onclick="createNewKey()">Create New Key</button>
-        </div>
+      <div>
+        <button class="btn" onclick="createNewKey()">Create New Key</button>
+      </div>
 
-        <div id="errorMessage" class="error"></div>
+      <div id="errorMessage" class="error"></div>
 
-        <h2>License Keys</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Key</th>
-                    <th>Machine ID</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="keysTable">
-            </tbody>
-        </table>
+      <h2>License Keys</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>License</th>
+            <th>Machine ID</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="keysTable"></tbody>
+      </table>
     </div>
 
     <script>
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
-            setTimeout(() => {
-                errorDiv.textContent = '';
-            }, 5000);
-        }
+      function showError(message) {
+        const errorDiv = document.getElementById("errorMessage");
+        errorDiv.textContent = message;
+        setTimeout(() => {
+          errorDiv.textContent = "";
+        }, 5000);
+      }
 
-        async function loadKeys() {
-            try {
-                const response = await fetch('/v1/keys');
-                const data = await response.json();
+      async function loadKeys() {
+        try {
+          const response = await fetch("/v1/keys");
+          const data = await response.json();
 
-                if (data.status !== 0) {
-                    showError('Failed to load keys');
-                    return;
-                }
+          if (data.status !== 0) {
+            showError("Failed to load keys");
+            return;
+          }
 
-                const tbody = document.getElementById('keysTable');
-                tbody.innerHTML = '';
+          const tbody = document.getElementById("keysTable");
+          tbody.innerHTML = "";
 
-                if (!Array.isArray(data.keys)) {
-                    showError('Invalid data format received');
-                    return;
-                }
+          if (!Array.isArray(data.keys)) {
+            showError("Invalid data format received");
+            return;
+          }
 
-                data.keys.forEach(key => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${key.key}</td>
-                        <td>${key.machine || 'Not bound'}</td>
-                        <td>${key.revoked ? 'Revoked' : 'Active'}</td>
+          data.keys.forEach((key) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                        <td class="ellipsis">${key.key}</td>
+                        <td class="ellipsis">${key.license ?? "N/A"}</td>
+                        <td>${key.machine || "Not bound"}</td>
+                        <td>${key.revoked ? "Revoked" : "Active"}</td>
                         <td>
-                            <button class="btn" onclick="revokeKey('${key.key}')" ${key.revoked ? 'disabled' : ''}>
+                            <button class="btn" onclick="revokeKey('${
+                              key.key
+                            }')" ${key.revoked ? "disabled" : ""}>
                                 Revoke
                             </button>
                         </td>
                     `;
-                    tbody.appendChild(tr);
-                });
-            } catch (error) {
-                showError('Error loading keys: ' + error.message);
-            }
+            tbody.appendChild(tr);
+          });
+        } catch (error) {
+          showError("Error loading keys: " + error.message);
         }
+      }
 
-        async function createNewKey() {
-            try {
-                const response = await fetch('/v1/keys', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        persist: true
-                    })
-                });
-                const data = await response.json();
+      async function createNewKey() {
+        try {
+          const response = await fetch("/v1/keys", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              persist: true,
+            }),
+          });
+          const data = await response.json();
 
-                if (data.status !== 0) {
-                    showError('Failed to create key');
-                    return;
-                }
+          if (data.status !== 0) {
+            showError("Failed to create key");
+            return;
+          }
 
-                await loadKeys();
-            } catch (error) {
-                showError('Error creating key: ' + error.message);
-            }
+          await loadKeys();
+        } catch (error) {
+          showError("Error creating key: " + error.message);
         }
+      }
 
-        async function revokeKey(key) {
-            try {
-                const response = await fetch(`/v1/keys/${key}/revoke`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
+      async function revokeKey(key) {
+        try {
+          const response = await fetch(`/v1/keys/${key}/revoke`, {
+            method: "POST",
+          });
+          const data = await response.json();
 
-                if (data.status !== 0) {
-                    showError('Failed to revoke key');
-                    return;
-                }
-                await loadKeys();
-            } catch (error) {
-                showError('Error revoking key: ' + error.message);
-            }
+          if (data.status !== 0) {
+            showError("Failed to revoke key");
+            return;
+          }
+          await loadKeys();
+        } catch (error) {
+          showError("Error revoking key: " + error.message);
         }
+      }
 
-        loadKeys();
+      loadKeys();
     </script>
-</body>
-
+  </body>
 </html>

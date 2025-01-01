@@ -83,6 +83,9 @@ class LisceneKeyManager {
     if (!key) return null;
     keyData.machine = machine;
 
+    const license = await this.generateLicense(key,machine)
+    keyData.license = license;
+
     const allKeys = await this.fetchAll();
     const updatedKeys = allKeys.map((d) =>
       d.key == keyData.key ? keyData : d
@@ -92,7 +95,6 @@ class LisceneKeyManager {
   }
 
   async validate(key) {
-    try {
       const buf = Buffer.from(key, "hex");
 
       const _data = utils.crypt(PublicKey, buf, false);
@@ -104,9 +106,7 @@ class LisceneKeyManager {
           return data;
       }
       logger.info(`Encountered invalid key ${_data}`);
-    } catch (e) {
-      logger.error(e.toString());
-    }
+      return data;
   }
 
   async generateLicense(key, machine) {

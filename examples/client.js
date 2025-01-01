@@ -33,13 +33,13 @@ const checkLicense = async (pathToKey, pathToLicense) => {
 const _checkLicense = async (pathToKey, pathToLicense) => {
   const licenseKey = fs.readFileSync(pathToKey).toString().replace("\n", "");
 
-  const machineId = md.get().digest;
 
   let _license;
   try {
     _license = fs.readFileSync(pathToLicense).toString().replace("\n", "");
   } catch (e) {
     logger.warn("Failed to load license file, fetching from license server");
+    const machineId = md.get().digest;
     const params = {
       method: "POST",
       body: JSON.stringify({ id: machineId, key: licenseKey }),
@@ -64,7 +64,6 @@ const _checkLicense = async (pathToKey, pathToLicense) => {
 
   if (
     license.key === licenseKey &&
-    license.machine === machineId &&
     license.identity === config.identity
   ) {
     if (

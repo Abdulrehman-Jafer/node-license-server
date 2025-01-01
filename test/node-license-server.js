@@ -16,8 +16,6 @@ var PublicKey = fs.readFileSync(config.rsa_public_key).toString()
 
 
 describe('node-license-server', function(){
-  it('get function', function(){
-  })
 
   it('should success', function() {
     var message = " message "
